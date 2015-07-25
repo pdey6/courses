@@ -1,0 +1,283 @@
+---
+title: "Practical Machine Learning Course Project 1 & 2"
+author: "Pritam Dey"
+date: "July 25, 2015"
+output: html_document
+---
+********************************************************************************************
+
+# Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, our goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. We are asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+# Synopsis
+The goal of the project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set against which the prediction has to be made. 
+
+My report below would attempt to answer the following questions:
+
+a. How I built the model  
+b. How I used cross validation
+c. My expected out of sample error
+d. Why I made the choices I did
+
+# Approach
+
+Below is the summary of the approach I took to make my prediction:
+
+#### 1. Downloaded, extracted, and loaded the data (csv files):
+
+#### 2. Basic exploration of the data: 
+    a. I did a quick exploration of the data set to get a sense of the data structure, its dimensions, missing and/or bad data, and what kind of data processing/cleaning needs to be done.  
+    b. Initially the training dataset had 19622 rows and 160 variables (columns). Testing dataset has 20 rows and 160 variables (columns).
+    
+#### 3. Processing the data: 
+    a. First I tried to run the prediction model using the complete raw dataset. But when I did son, I ran into major errors.
+    b. For example, when I ran the code, I got the message "Every row has at least one missing value were found". Hence cleaning the data was required to run the model right.
+    c. So I need to do some basic processing of the dataset.
+    d. I removed columns with NA and missing values
+    e. I removed unnecessary rows such as first column (containing ID). 
+    f. I also removed columns such as raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp, new_window as I felt they were unnecessary and do not aid in my model building.
+    g. After performing above steps, the size of training dataset reduced to 19622 rows and 59 variables (columns). Testing dataset has 20 rows and 59 variables (columns).
+    
+
+#### 4. Partitioning the data:
+    a. To perform the analysis, I needed to split the data into a training sample to build my model, and a separate testing data set to validate and test my model.
+    b. Since the size of training data set is medium (less than 20000 rows), I made the choice to partition the data into 70:30 ratio: 70% for training and 30% for testing.
+    c. After partitioning, the new data set size is: 13737 rows for training set, and 5885 rows for testing set. The number of variables remains at 59.
+
+#### 5. Building the prediction model:
+    a. I chose to build my model using two approaches: **Decision Tree** and **Random Forest**
+    b. I compare the results of these two models, and choose the better one for final output and submission.
+
+#### 6. Output of prediction model:  
+    a. Using Decision Tree, I got accuracy of 99.88% and out of sample error of 0.12% (1-0.9888)
+    b. Using Random Forest, I got accuracy of 99.92% and out of sample error of 0.08% (1-0.9992)
+    c. As compared to prediction with Decision Tree, prediction with Random Tree yielded better accuracy percentage, and low out of sample error. The difference between the two models is marginal; nevertheless Random Tree provided slightly better prediction result. Hence I chose Random Forest model for my further prediction.
+
+#### 7. Applying the model on Test data set.
+    a. I apply the Random Forest model on my test dataset that contains 20 observations.    
+    b. This is the output I obtained:
+			##  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 
+			##  B  A  B  A  A  E  D  B  A  A  B  C  B  A  E  E  A  B  B  B 
+			## Levels: A B C D E
+			
+
+**I thought I will put below section as there is a question in the project "Do the authors describe what they expect the out of sample error to be and estimate the error appropriately with cross-validation?"**
+
+#### 8. My Expected Out-of-Sample Error
+    a. Out-of-sample error is the error rate I get on a new data set. Lower Out-of-sample error means there is less likelihood of avoiding overfitting.
+    b. I expect the Out-of-sample error to be small because of the small size of the dataset. This is because the testing subset (which is 30% of the original training dataset size) is of small size, and would therefore give an unbiased estimate of the random forest's prediction accuracy.
+    c. As shown in Item 6 above, the estimated/actual out-of-sample error on Random Forest prediction is 0.08% - an extremely low error rate. This validates my out-of-sample guess.
+
+#### 9. How I used Cross-Validation as asked in the assignment question.
+    a. As demonstrated in the above steps, my approach for cross-validation have been:
+        - Used the training set
+        - Split it into training/test sets in 70:30 split
+        - Built the prediction model on the training set
+        - Validated on the test set
+        - I used 5-fold cross-validation when building my model
+    b. I used cross-validation for:
+        - Picking variables to include in my model
+        - Picking the type of prediction function to use (in my case, trainControl and randomForest)
+        - Picking the parameters in the prediction function (I chose 55 variables excluding classe variable that is the outcome variable)  
+        - Comparing different predictors (Decision Tree vs. Random Forest)
+        
+#### 10. Prediction Assignment Submission
+    a. Lastly, I applied the machine learning algorithm built above to each of the 20 test cases in the testing data set.
+    b. As per the assignment submission instructions (Project 2), I put the data into a format ready for the Submission phase of the assignment. The prediction worked as expected as I was able to upload the output files successfully obtaining final score of 20/20.
+
+*********************TOTAL WORD COUNT TILL HERE: 1008 WORDS**********************************
+
+********************************************************************************************
+
+# APPENDIX
+This section will display the R code and related plots/figures
+
+# 1. Load the libraries
+
+```{r, echo=TRUE, cache=TRUE}
+library(knitr)
+library(caret)
+library(randomForest)
+library(rpart)
+#library(rpart.plot)
+#library(rattle)
+
+```
+
+# 2. Download the data
+
+```{r, echo=TRUE}
+trainFile <- "./PML/pml-training.csv"
+testFile <- "./PML/pml-testing.csv"
+
+if (!file.exists("./PML")) {
+  dir.create("./PML")
+}
+
+if(!file.exists(trainFile) | !file.exists(testFile)) {
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile=trainFile)
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile=testFile)
+}
+
+```
+
+# 3. Load the data
+
+```{r, echo=TRUE, cache=TRUE}
+trainRawData <- read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!",""), header=TRUE)
+testRawData <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""), header=TRUE)
+```
+
+# 4. Basic Exploration of data 
+
+```{r, echo=TRUE, cache=TRUE}
+dim(trainRawData) # Training dataset
+dim(testRawData) # Testing dataset
+
+```
+Training dataset has 19622 rows and 160 variables (columns). Testing dataset has 20 rows and 160 variables (columns).
+
+# 5. Process/Clean the data
+
+## Step 1: Remove columns with NA values, and first column (ID)
+
+```{r, echo=TRUE, cache=TRUE}
+# removes first column with ID
+trainRawData <- trainRawData[,-1]
+testRawData <- testRawData[,-1]
+
+# removes columns containing NA
+processedTrainingData <- trainRawData
+processedTrainingData <- processedTrainingData[, unlist(lapply(processedTrainingData, function(x) !any(is.na(x))))]
+dim(processedTrainingData)
+
+processedTestingData <- testRawData
+processedTestingData <- processedTestingData[, unlist(lapply(processedTestingData, function(x) !any(is.na(x))))]
+dim(processedTestingData)
+```
+Now Training dataset has 19622 rows and  60 variables (columns). Testing dataset has 20 rows and  60 variables (columns).
+
+# 6. Partitioning the data
+
+Size of training data set is medium. Hence I am going to partition the data into 70% for training and 30% for testing
+
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, cache=TRUE}
+
+set.seed(22222)
+
+inTrain <- createDataPartition(y=processedTrainingData$classe, p=0.70, list=FALSE)
+myTraining <- processedTrainingData[inTrain, ]
+myTesting <- processedTrainingData[-inTrain, ]
+
+processedTrainingData <- processedTrainingData[, sapply(processedTrainingData, is.numeric)]
+processedTestingData <- processedTestingData[, sapply(processedTestingData, is.numeric)]
+
+dim(myTraining)
+dim(myTesting)
+
+```
+Now Training dataset has 19622 rows and 59 variables (columns). Testing dataset has 20 rows and 59 variables (columns).
+
+# 7. Creating Basic Plots
+
+```{r, echo=TRUE}
+library(caret)
+library(rattle)
+library(rpart.plot)
+
+modelFitTraining <- train(classe ~ ., method="rpart", data=myTraining)
+fancyRpartPlot(modelFitTraining$finalModel)
+
+treeModel <- rpart(classe ~ ., data=myTraining, method="class")
+prp(treeModel)
+
+```
+
+# 8. Build prediction model with Decision Tree
+Build the prediction model using  training data where "classe" is the outcome and other features are as predictors.
+
+```{r, echo=TRUE, cache=TRUE}
+
+controlDTree <- trainControl(method="cv", 5)
+modelDTree <- train(classe ~ ., data=myTraining, method="rf", trControl=controlDTree, ntree=150)
+modelDTree
+
+predictDTree <- predict(modelDTree, myTesting)
+confusionMatrix(myTesting$classe, predictDTree)
+
+accuracy <- postResample(predictDTree, myTesting$classe)
+model_accuracy <- accuracy[[1]]*100
+model_accuracy
+
+out_of_sample_error <- 1 - as.numeric(confusionMatrix(myTesting$classe, predictDTree)$overall[1])
+out_of_sample_error <- out_of_sample_error[[1]]*100
+out_of_sample_error
+
+```
+
+# 9. Build prediction model with Random Forest
+
+```{r, echo=TRUE, cache=TRUE}
+
+modelFitRf <- randomForest(classe~., data=myTraining, importance=TRUE, keep.forest=TRUE)
+modelFitRf
+
+# Run the prediction based upon the modFit model created and the testing data
+predictionRf<-predict(modelFitRf, myTesting)
+confusionMatrix(predictionRf, myTesting$classe)
+
+accuracy <- postResample(predictionRf, myTesting$classe)
+model_accuracy <- accuracy[[1]]*100
+model_accuracy
+
+out_of_sample_error <- 1 - as.numeric(confusionMatrix(myTesting$classe, predictionRf)$overall[1])
+out_of_sample_error <- out_of_sample_error[[1]]*100
+out_of_sample_error
+
+# Plot the Random Forest model
+plot(modelDTree, log = "y", lwd = 2, main = "Random Forest accuracy", xlab = "Predictors", 
+    ylab = "Accuracy")
+
+# Run a varPlot to look at the importance of the variables
+varImpPlot(modelFitRf, type=2)
+
+```
+
+As we can see, every time a split of a node is made on variable m the gini impurity criterion for the two descendent nodes is less than the parent node. Adding up the gini decreases for each individual variable over all trees in the forest gives a fast variable importance that is often very consistent with the permutation importance measure.
+
+# 10. Cross Validation
+
+```{r, echo=TRUE, cache=TRUE}
+
+myTesting$predRight <- predictionRf==myTesting$classe;
+qplot(classe, data=myTesting, main="Predictions") + facet_grid(predRight ~ .)
+```
+
+The above prediction show that there is no overfitting.
+
+# 11. Prediction Assignment Submission
+
+For the submission phase of the assignment, run the new model and the prediction for the 20 new observations, and store the output in .txt files.
+
+```{r, echo=TRUE, cache=TRUE}
+
+#final_prediction <- predict(modelFitRf, processedTestingData)
+#final_prediction
+```
+
+[1] B A B A A E D B A A B C B A E E A B B B  
+Levels: A B C D E
+
+```{r, echo=TRUE, cache=TRUE}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+#pml_write_files(final_prediction)
+
+```
+
